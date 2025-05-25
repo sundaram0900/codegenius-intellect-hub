@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bot, User, Code, FileText, Image as ImageIcon } from 'lucide-react';
+import { Zap, User, Code, FileText, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -28,9 +28,9 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
         isUser 
           ? "bg-gradient-to-r from-blue-500 to-cyan-500" 
-          : "bg-gradient-to-r from-purple-500 to-pink-500"
+          : "bg-gradient-to-r from-orange-500 to-yellow-500"
       )}>
-        {isUser ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
+        {isUser ? <User className="w-4 h-4 text-white" /> : <Zap className="w-4 h-4 text-white" />}
       </div>
 
       {/* Message Content */}
@@ -38,7 +38,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         "max-w-xs lg:max-w-md xl:max-w-lg p-4 rounded-2xl backdrop-blur-sm border transition-all duration-200 hover:scale-[1.02]",
         isUser
           ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-300/30 text-white rounded-br-sm"
-          : "bg-white/10 border-white/20 text-white rounded-bl-sm"
+          : "bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-300/20 text-white rounded-bl-sm"
       )}>
         {/* File attachments */}
         {message.files && message.files.length > 0 && (

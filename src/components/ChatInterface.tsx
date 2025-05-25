@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Image, FileText, Bot, User } from 'lucide-react';
+import { Send, Paperclip, Mic, Image, FileText, Zap, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,8 +91,8 @@ const ChatInterface = () => {
       {/* Header */}
       <div className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-            <Bot className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center">
+            <Zap className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Penguin AI</h1>
@@ -165,7 +164,7 @@ const ChatInterface = () => {
             <Button
               onClick={() => handleSendMessage(inputMessage)}
               disabled={!inputMessage.trim() || isTyping}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-full px-6 py-3"
+              className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white rounded-full px-6 py-3"
             >
               <Send className="w-5 h-5" />
             </Button>
