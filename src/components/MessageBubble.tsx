@@ -16,29 +16,29 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = ({ message }: MessageBubbleProps) => {
-  const isBot = message.type === 'bot';
+  const isUser = message.type === 'user';
 
   return (
     <div className={cn(
       "flex items-start space-x-3 animate-fade-in",
-      isBot ? "justify-start" : "justify-end flex-row-reverse space-x-reverse"
+      isUser ? "justify-end flex-row-reverse space-x-reverse" : "justify-start"
     )}>
       {/* Avatar */}
       <div className={cn(
         "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-        isBot 
-          ? "bg-gradient-to-r from-purple-500 to-pink-500" 
-          : "bg-gradient-to-r from-blue-500 to-cyan-500"
+        isUser 
+          ? "bg-gradient-to-r from-blue-500 to-cyan-500" 
+          : "bg-gradient-to-r from-purple-500 to-pink-500"
       )}>
-        {isBot ? <Bot className="w-4 h-4 text-white" /> : <User className="w-4 h-4 text-white" />}
+        {isUser ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
       </div>
 
       {/* Message Content */}
       <div className={cn(
         "max-w-xs lg:max-w-md xl:max-w-lg p-4 rounded-2xl backdrop-blur-sm border transition-all duration-200 hover:scale-[1.02]",
-        isBot
-          ? "bg-white/10 border-white/20 text-white rounded-bl-sm"
-          : "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-300/30 text-white rounded-br-sm"
+        isUser
+          ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-300/30 text-white rounded-br-sm"
+          : "bg-white/10 border-white/20 text-white rounded-bl-sm"
       )}>
         {/* File attachments */}
         {message.files && message.files.length > 0 && (
@@ -64,7 +64,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         {/* Timestamp */}
         <div className={cn(
           "mt-2 text-xs opacity-60",
-          isBot ? "text-gray-300" : "text-gray-200"
+          isUser ? "text-gray-200" : "text-gray-300"
         )}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>

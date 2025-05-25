@@ -21,7 +21,7 @@ const ChatInterface = () => {
     {
       id: '1',
       type: 'bot',
-      content: "Hello! I'm your AI assistant. I can help you with coding, mathematics, general reasoning, and much more. Feel free to send me text, images, documents, or audio files - I'm here to help!",
+      content: "Hello! I'm Penguin AI, your intelligent assistant. I can help you with coding, mathematics, general reasoning, and much more. Feel free to send me text, images, documents, or audio files - I'm here to help!",
       timestamp: new Date(),
     }
   ]);
@@ -96,7 +96,7 @@ const ChatInterface = () => {
             <Bot className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">AI Assistant Pro</h1>
+            <h1 className="text-xl font-bold text-white">Penguin AI</h1>
             <p className="text-sm text-gray-300">Coding • Math • Reasoning • Multi-modal</p>
           </div>
         </div>
