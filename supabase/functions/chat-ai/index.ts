@@ -15,46 +15,58 @@ serve(async (req) => {
   try {
     const { message, conversation_history } = await req.json()
 
-    // Get OpenAI API key from environment
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured')
+    // Get Gemini API key from environment
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+    if (!geminiApiKey) {
+      throw new Error('Gemini API key not configured')
     }
 
-    // Prepare messages for OpenAI
-    const messages = [
-      {
-        role: "system",
-        content: "You are Penguin AI, an intelligent assistant that helps with coding, mathematics, general reasoning, and more. You are helpful, accurate, and provide detailed explanations."
-      },
-      ...conversation_history,
-      {
-        role: "user",
-        content: message
-      }
-    ]
+    // Prepare conversation history for Gemini
+    let conversationText = "You are Penguin AI, an intelligent assistant that helps with coding, mathematics, general reasoning, and more. You are helpful, accurate, and provide detailed explanations.\n\n"
+    
+    // Add conversation history
+    if (conversation_history && conversation_history.length > 0) {
+      conversation_history.forEach((msg: any) => {
+        if (msg.role === 'user') {
+          conversationText += `Human: ${msg.content}\n\n`
+        } else {
+          conversationText += `Assistant: ${msg.content}\n\n`
+        }
+      })
+    }
+    
+    // Add current message
+    conversationText += `Human: ${message}\n\nAssistant: `
 
-    // Call OpenAI API
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        messages: messages,
-        max_tokens: 1000,
-        temperature: 0.7,
+        contents: [{
+          parts: [{
+            text: conversationText
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1000,
+        }
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`)
+      const errorData = await response.text()
+      console.error('Gemini API error:', errorData)
+      throw new Error(`Gemini API error: ${response.statusText}`)
     }
 
     const data = await response.json()
-    const aiResponse = data.choices[0]?.message?.content || 'Sorry, I could not generate a response.'
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.'
 
     return new Response(
       JSON.stringify({ response: aiResponse }),

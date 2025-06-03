@@ -61,27 +61,43 @@ const ChatInterface = () => {
     setInputMessage('');
     setIsTyping(true);
 
-    // Call AI API (OpenAI integration would go here)
-    setTimeout(() => {
-      const responses = [
-        "I understand you're asking about " + (content.includes('code') ? 'coding' : content.includes('math') ? 'mathematics' : 'general reasoning') + ". Let me help you with that!",
-        "Great question! Based on your input, I can provide detailed assistance. Would you like me to break this down step by step?",
-        "I see you've shared some content. Let me analyze this and provide you with a comprehensive response.",
-        "Excellent! This is exactly the type of problem I love solving. Here's my detailed analysis...",
-      ];
+    try {
+      // Prepare conversation history for the AI
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
 
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      // Call the AI edge function
+      const { data, error } = await supabase.functions.invoke('chat-ai', {
+        body: {
+          message: content,
+          conversation_history: conversationHistory
+        }
+      });
+
+      if (error) throw error;
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: randomResponse,
+        content: data.response || 'Sorry, I could not generate a response.',
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: 'Sorry, there was an error processing your request. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500 + Math.random() * 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
