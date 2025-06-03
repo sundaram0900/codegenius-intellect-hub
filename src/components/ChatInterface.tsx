@@ -1,11 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Image, LogOut, Settings, Zap, User } from 'lucide-react';
+import { Send, Paperclip, Mic, Image, LogOut, Settings, Zap, User, CornerDownLeft, MessageSquare, Share, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
-import MessageBubble from './MessageBubble';
 import FileUpload from './FileUpload';
 import TypingIndicator from './TypingIndicator';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ interface Message {
   content: string;
   timestamp: Date;
   files?: File[];
+  replyTo?: string;
 }
 
 const ChatInterface = () => {
@@ -33,6 +33,8 @@ const ChatInterface = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -55,10 +57,12 @@ const ChatInterface = () => {
       content: content.trim(),
       timestamp: new Date(),
       files,
+      replyTo: replyingTo || undefined,
     };
 
     setMessages(prev => [...prev, newMessage]);
     setInputMessage('');
+    setReplyingTo(null);
     setIsTyping(true);
 
     try {
@@ -116,6 +120,44 @@ const ChatInterface = () => {
     await signOut();
   };
 
+  const handleNewChat = () => {
+    setMessages([
+      {
+        id: '1',
+        type: 'bot',
+        content: "Hello! I'm Penguin AI, your intelligent assistant. I can help you with coding, mathematics, general reasoning, and much more. Feel free to send me text, images, documents, or audio files - I'm here to help!",
+        timestamp: new Date(),
+      }
+    ]);
+    setReplyingTo(null);
+  };
+
+  const handleShareChat = () => {
+    const chatContent = messages.map(msg => `${msg.type === 'user' ? 'You' : 'Penguin AI'}: ${msg.content}`).join('\n\n');
+    navigator.clipboard.writeText(chatContent);
+    alert('Chat copied to clipboard!');
+  };
+
+  const handleReply = (messageId: string) => {
+    setReplyingTo(messageId);
+    inputRef.current?.focus();
+  };
+
+  const handleCopyCode = (content: string) => {
+    // Extract code blocks from the content
+    const codeBlocks = content.match(/```[\s\S]*?```/g) || [];
+    if (codeBlocks.length > 0) {
+      const code = codeBlocks.map(block => block.replace(/```\w*\n?/g, '').replace(/```/g, '')).join('\n\n');
+      navigator.clipboard.writeText(code);
+      setCopiedCode(content);
+      setTimeout(() => setCopiedCode(null), 2000);
+    }
+  };
+
+  const hasCodeBlocks = (content: string) => {
+    return content.includes('```');
+  };
+
   if (!isApproved && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
@@ -140,7 +182,7 @@ const ChatInterface = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto">
+    <div className="flex flex-col h-screen max-w-6xl mx-auto">
       {/* Header */}
       <div className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4">
         <div className="flex items-center justify-between">
@@ -155,6 +197,24 @@ const ChatInterface = () => {
           </div>
           
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleNewChat}
+              size="sm"
+              variant="ghost"
+              className="text-gray-300 hover:text-white"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              New Chat
+            </Button>
+            <Button
+              onClick={handleShareChat}
+              size="sm"
+              variant="ghost"
+              className="text-gray-300 hover:text-white"
+            >
+              <Share className="w-4 h-4 mr-2" />
+              Share
+            </Button>
             <span className="text-sm text-gray-300">Welcome, {profile?.full_name || profile?.email}</span>
             {isAdmin && (
               <Button
@@ -197,54 +257,124 @@ const ChatInterface = () => {
         </div>
       )}
 
+      {/* Reply indicator */}
+      {replyingTo && (
+        <div className="bg-blue-500/20 border-b border-blue-300/20 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CornerDownLeft className="w-4 h-4 text-blue-300" />
+              <span className="text-sm text-blue-200">
+                Replying to: {messages.find(m => m.id === replyingTo)?.content.substring(0, 50)}...
+              </span>
+            </div>
+            <Button
+              onClick={() => setReplyingTo(null)}
+              size="sm"
+              variant="ghost"
+              className="text-blue-300 hover:text-white"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Chat Area */}
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {messages.map((message) => (
-            <div key={message.id} className={cn(
-              "flex items-start space-x-3 animate-fade-in",
-              message.type === 'user' ? "justify-end flex-row-reverse space-x-reverse" : "justify-start"
-            )}>
-              {/* Avatar */}
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                message.type === 'user' 
-                  ? "bg-gradient-to-r from-blue-500 to-cyan-500" 
-                  : "bg-gradient-to-r from-orange-500 to-yellow-500"
-              )}>
-                {message.type === 'user' ? <User className="w-4 h-4 text-white" /> : <Zap className="w-4 h-4 text-white" />}
-              </div>
+            <div key={message.id} className="w-full">
+              {/* User messages - completely right side */}
+              {message.type === 'user' && (
+                <div className="flex justify-end">
+                  <div className="flex items-start space-x-3 max-w-[70%]">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-300/30 text-white p-4 rounded-2xl rounded-br-sm backdrop-blur-sm">
+                      {message.replyTo && (
+                        <div className="mb-2 p-2 bg-white/10 rounded-lg text-xs opacity-70">
+                          Replying to: {messages.find(m => m.id === message.replyTo)?.content.substring(0, 30)}...
+                        </div>
+                      )}
+                      
+                      {/* File attachments */}
+                      {message.files && message.files.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          {message.files.map((file, index) => (
+                            <div key={index} className="flex items-center space-x-2 p-2 bg-white/10 rounded-lg">
+                              <Image className="w-4 h-4 text-blue-300" />
+                              <span className="text-sm text-gray-300 truncate">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-              {/* Message Content */}
-              <div className={cn(
-                "max-w-xs lg:max-w-md xl:max-w-lg p-4 rounded-2xl backdrop-blur-sm border transition-all duration-200 hover:scale-[1.02]",
-                message.type === 'user'
-                  ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-300/30 text-white rounded-br-sm"
-                  : "bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-300/20 text-white rounded-bl-sm"
-              )}>
-                {/* File attachments */}
-                {message.files && message.files.length > 0 && (
-                  <div className="mb-3 space-y-2">
-                    {message.files.map((file, index) => (
-                      <div key={index} className="flex items-center space-x-2 p-2 bg-white/10 rounded-lg">
-                        <Image className="w-4 h-4 text-blue-300" />
-                        <span className="text-sm text-gray-300 truncate">{file.name}</span>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-xs opacity-60 text-gray-200">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <Button
+                          onClick={() => handleReply(message.id)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-300 hover:text-white h-6 px-2"
+                        >
+                          <CornerDownLeft className="w-3 h-3" />
+                        </Button>
                       </div>
-                    ))}
+                    </div>
+                    
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
                   </div>
-                )}
-
-                {/* Message text */}
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                
-                {/* Timestamp */}
-                <div className={cn(
-                  "mt-2 text-xs opacity-60",
-                  message.type === 'user' ? "text-gray-200" : "text-gray-300"
-                )}>
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
-              </div>
+              )}
+
+              {/* Bot messages - completely left side */}
+              {message.type === 'bot' && (
+                <div className="flex justify-start">
+                  <div className="flex items-start space-x-3 max-w-[70%]">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center flex-shrink-0">
+                      <Zap className="w-4 h-4 text-white" />
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-300/20 text-white p-4 rounded-2xl rounded-bl-sm backdrop-blur-sm">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-xs opacity-60 text-gray-300">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {hasCodeBlocks(message.content) && (
+                            <Button
+                              onClick={() => handleCopyCode(message.content)}
+                              size="sm"
+                              variant="ghost"
+                              className="text-orange-300 hover:text-white h-6 px-2"
+                            >
+                              {copiedCode === message.content ? (
+                                <Check className="w-3 h-3" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleReply(message.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="text-orange-300 hover:text-white h-6 px-2"
+                          >
+                            <CornerDownLeft className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {isTyping && <TypingIndicator />}
