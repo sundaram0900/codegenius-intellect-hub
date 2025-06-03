@@ -1,12 +1,12 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Image, LogOut, Settings, Zap, User, CornerDownLeft, MessageSquare, Share, Copy, Check } from 'lucide-react';
+import { Send, Paperclip, Mic, Image, LogOut, Settings, Zap, User, CornerDownLeft, MessageSquare, Share, Copy, Check, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import FileUpload from './FileUpload';
 import TypingIndicator from './TypingIndicator';
+import MessageContent from './MessageContent';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,7 @@ const ChatInterface = () => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -130,28 +130,32 @@ const ChatInterface = () => {
       }
     ]);
     setReplyingTo(null);
+    setShareLink(null);
   };
 
   const handleShareChat = () => {
-    const chatContent = messages.map(msg => `${msg.type === 'user' ? 'You' : 'Penguin AI'}: ${msg.content}`).join('\n\n');
-    navigator.clipboard.writeText(chatContent);
-    alert('Chat copied to clipboard!');
+    // Generate a unique ID for the chat
+    const chatId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    const chatData = {
+      id: chatId,
+      messages: messages,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Store in localStorage for demo purposes (in production, you'd save to database)
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify(chatData));
+    
+    // Generate shareable link
+    const shareUrl = `${window.location.origin}/chat/${chatId}`;
+    setShareLink(shareUrl);
+    
+    // Copy to clipboard as backup
+    navigator.clipboard.writeText(shareUrl);
   };
 
   const handleReply = (messageId: string) => {
     setReplyingTo(messageId);
     inputRef.current?.focus();
-  };
-
-  const handleCopyCode = (content: string) => {
-    // Extract code blocks from the content
-    const codeBlocks = content.match(/```[\s\S]*?```/g) || [];
-    if (codeBlocks.length > 0) {
-      const code = codeBlocks.map(block => block.replace(/```\w*\n?/g, '').replace(/```/g, '')).join('\n\n');
-      navigator.clipboard.writeText(code);
-      setCopiedCode(content);
-      setTimeout(() => setCopiedCode(null), 2000);
-    }
   };
 
   const hasCodeBlocks = (content: string) => {
@@ -212,7 +216,7 @@ const ChatInterface = () => {
               variant="ghost"
               className="text-gray-300 hover:text-white"
             >
-              <Share className="w-4 h-4 mr-2" />
+              <Link className="w-4 h-4 mr-2" />
               Share
             </Button>
             <span className="text-sm text-gray-300">Welcome, {profile?.full_name || profile?.email}</span>
@@ -237,6 +241,29 @@ const ChatInterface = () => {
           </div>
         </div>
       </div>
+
+      {/* Share Link Display */}
+      {shareLink && (
+        <div className="bg-green-500/20 border-b border-green-300/20 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Link className="w-4 h-4 text-green-300" />
+              <span className="text-sm text-green-200">Share link created and copied to clipboard:</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-green-300 bg-green-900/30 px-2 py-1 rounded">{shareLink}</span>
+              <Button
+                onClick={() => setShareLink(null)}
+                size="sm"
+                variant="ghost"
+                className="text-green-300 hover:text-white"
+              >
+                ✕
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Panel Toggle */}
       {isAdmin && showAdminPanel && (
@@ -340,36 +367,20 @@ const ChatInterface = () => {
                     </div>
                     
                     <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-300/20 text-white p-4 rounded-2xl rounded-bl-sm backdrop-blur-sm">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      <MessageContent content={message.content} />
                       
                       <div className="mt-2 flex items-center justify-between">
                         <div className="text-xs opacity-60 text-gray-300">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div className="flex items-center space-x-1">
-                          {hasCodeBlocks(message.content) && (
-                            <Button
-                              onClick={() => handleCopyCode(message.content)}
-                              size="sm"
-                              variant="ghost"
-                              className="text-orange-300 hover:text-white h-6 px-2"
-                            >
-                              {copiedCode === message.content ? (
-                                <Check className="w-3 h-3" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
-                              )}
-                            </Button>
-                          )}
-                          <Button
-                            onClick={() => handleReply(message.id)}
-                            size="sm"
-                            variant="ghost"
-                            className="text-orange-300 hover:text-white h-6 px-2"
-                          >
-                            <CornerDownLeft className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={() => handleReply(message.id)}
+                          size="sm"
+                          variant="ghost"
+                          className="text-orange-300 hover:text-white h-6 px-2"
+                        >
+                          <CornerDownLeft className="w-3 h-3" />
+                        </Button>
                       </div>
                     </div>
                   </div>
