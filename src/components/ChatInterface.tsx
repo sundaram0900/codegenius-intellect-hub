@@ -35,6 +35,7 @@ const ChatInterface = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  const [pastedFiles, setPastedFiles] = useState<File[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +44,38 @@ const ChatInterface = () => {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const clipboardData = e.clipboardData;
+    const items = clipboardData.items;
+    const files: File[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          // Create a more descriptive filename
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const extension = file.type.split('/')[1] || 'png';
+          const renamedFile = new File([file], `pasted-image-${timestamp}.${extension}`, {
+            type: file.type,
+          });
+          files.push(renamedFile);
+        }
+      }
+    }
+
+    if (files.length > 0) {
+      e.preventDefault();
+      setPastedFiles(files);
+      
+      // Auto-send the pasted images with a default message
+      const message = inputMessage.trim() || `Pasted ${files.length} image(s)`;
+      handleSendMessage(message, files);
+      setPastedFiles([]);
+    }
+  };
 
   const handleSendMessage = async (content: string, files?: File[]) => {
     if (!content.trim() && (!files || files.length === 0)) return;
@@ -148,9 +181,6 @@ const ChatInterface = () => {
     // Generate shareable link
     const shareUrl = `${window.location.origin}/chat/${chatId}`;
     setShareLink(shareUrl);
-    
-    // Copy to clipboard as backup
-    navigator.clipboard.writeText(shareUrl);
   };
 
   const handleReply = (messageId: string) => {
@@ -216,7 +246,7 @@ const ChatInterface = () => {
               variant="ghost"
               className="text-gray-300 hover:text-white"
             >
-              <Link className="w-4 h-4 mr-2" />
+              <Share className="w-4 h-4 mr-2" />
               Share
             </Button>
             <span className="text-sm text-gray-300">Welcome, {profile?.full_name || profile?.email}</span>
@@ -248,10 +278,25 @@ const ChatInterface = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Link className="w-4 h-4 text-green-300" />
-              <span className="text-sm text-green-200">Share link created and copied to clipboard:</span>
+              <span className="text-sm text-green-200">Shareable link:</span>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-green-300 bg-green-900/30 px-2 py-1 rounded">{shareLink}</span>
+              <a 
+                href={shareLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-green-300 bg-green-900/30 px-2 py-1 rounded hover:bg-green-900/50 transition-colors"
+              >
+                {shareLink}
+              </a>
+              <Button
+                onClick={() => navigator.clipboard.writeText(shareLink)}
+                size="sm"
+                variant="ghost"
+                className="text-green-300 hover:text-white"
+              >
+                <Copy className="w-3 h-3" />
+              </Button>
               <Button
                 onClick={() => setShareLink(null)}
                 size="sm"
@@ -413,7 +458,8 @@ const ChatInterface = () => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything - coding, math, reasoning, or upload files..."
+              onPaste={handlePaste}
+              placeholder="Ask me anything - coding, math, reasoning, or upload files... (Ctrl+V to paste images)"
               className="bg-white/10 border-white/20 text-white placeholder-gray-300 pr-12 py-6 text-lg rounded-2xl backdrop-blur-sm"
               disabled={isTyping || (!isApproved && !isAdmin)}
             />
